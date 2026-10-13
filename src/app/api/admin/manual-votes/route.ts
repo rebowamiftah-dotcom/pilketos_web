@@ -1,174 +1,234 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-async function verifyAdmin(request: Request) {
+async function verifyAdmin(request: NextRequest) {
   const authorization = request.headers.get('authorization');
 
   if (!authorization?.startsWith('Bearer ')) {
-    return false;
+    return {
+      error: NextResponse.json(
+        { error: 'Token autentikasi tidak ditemukan.' },
+        { status: 401 }
+      ),
+    };
   }
 
-  const token = authorization.slice(7).trim();
+  const token = authorization.slice(7);
 
-  if (!token) {
-    return false;
+  const {
+    data: { user },
+    error,
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !user || !user.email) {
+    return {
+      error: NextResponse.json(
+        { error: 'Sesi tidak valid. Silakan login kembali.' },
+        { status: 401 }
+      ),
+    };
   }
 
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  const adminEmail = process.env.ADMIN_EMAIL;
 
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const userEmail = data.user?.email?.trim().toLowerCase();
-
-  return !error && !!userEmail && !!adminEmail && userEmail === adminEmail;
-}
-
-export async function GET(request: Request) {
-  try {
-    if (!(await verifyAdmin(request))) {
-      return NextResponse.json(
+  if (
+    !adminEmail ||
+    user.email.toLowerCase() !== adminEmail.toLowerCase()
+  ) {
+    return {
+      error: NextResponse.json(
         { error: 'Kamu tidak memiliki akses admin.' },
         { status: 403 }
-      );
+      ),
+    };
+  }
+
+  return { user };
+}
+
+// GET: Mengambil kandidat, jumlah suara, dan riwayat perubahan.
+export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+
+  if ('error' in auth) {
+    return auth.error;
+  }
+
+  try {
+    const { data: candidates, error: candidateError } =
+      await supabaseAdmin
+        .from('candidates')
+        .select('id, nomor_urut, nama_ketua, nama_wakil, foto_url')
+        .eq('is_active', true)
+        .order('nomor_urut', { ascending: true });
+
+    if (candidateError) {
+      throw candidateError;
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('manual_vote_entries')
-      .select('id, candidate_id, vote_count, notes, created_at, updated_at')
-      .order('created_at', { ascending: true });
+    const { data: entries, error: entriesError } =
+      await supabaseAdmin
+        .from('manual_vote_entries')
+        .select('candidate_id, vote_count');
 
-    if (error) {
-      console.error('Gagal mengambil suara kertas:', error.message);
-
-      return NextResponse.json(
-        { error: 'Gagal mengambil data suara kertas.' },
-        { status: 500 }
-      );
+    if (entriesError) {
+      throw entriesError;
     }
 
-    return NextResponse.json(
-      { entries: data ?? [] },
-      { headers: { 'Cache-Control': 'no-store' } }
-    );
+    const { data: ballots, error: ballotsError } =
+      await supabaseAdmin
+        .from('ballots')
+        .select('candidate_id');
+
+    if (ballotsError) {
+      throw ballotsError;
+    }
+
+    const { data: history, error: historyError } =
+      await supabaseAdmin
+        .from('manual_vote_history')
+        .select(
+          'id, candidate_id, action, vote_count, notes, created_by, created_at'
+        )
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+    if (historyError) {
+      throw historyError;
+    }
+
+    const results = (candidates ?? []).map((candidate) => {
+      const digitalVotes = (ballots ?? []).filter(
+        (ballot) => ballot.candidate_id === candidate.id
+      ).length;
+
+      const manualVotes = (entries ?? [])
+        .filter((entry) => entry.candidate_id === candidate.id)
+        .reduce((total, entry) => total + entry.vote_count, 0);
+
+      return {
+        ...candidate,
+        digital_vote_count: digitalVotes,
+        manual_vote_count: manualVotes,
+        vote_count: digitalVotes + manualVotes,
+      };
+    });
+
+    return NextResponse.json({
+      candidates: results,
+      history: history ?? [],
+    });
   } catch (error) {
-    console.error('Kesalahan API suara kertas:', error);
+    console.error('Gagal mengambil data manual votes:', error);
 
     return NextResponse.json(
-      { error: 'Terjadi kesalahan pada server.' },
+      { error: 'Gagal mengambil data suara dari database.' },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    if (!(await verifyAdmin(request))) {
-      return NextResponse.json(
-        { error: 'Kamu tidak memiliki akses admin.' },
-        { status: 403 }
-      );
-    }
+// POST: Menambah atau mengurangi suara manual.
+export async function POST(request: NextRequest) {
+  const auth = await verifyAdmin(request);
 
+  if ('error' in auth) {
+    return auth.error;
+  }
+
+  try {
     const body = await request.json();
 
     const candidateId =
-      typeof body.candidateId === 'string' ? body.candidateId : '';
+      typeof body.candidate_id === 'string'
+        ? body.candidate_id
+        : '';
 
-    const voteCount = body.voteCount;
-
+    const action = body.action;
+    const voteCount = body.vote_count;
     const notes =
-      typeof body.notes === 'string' ? body.notes.trim().slice(0, 500) : null;
+      typeof body.notes === 'string'
+        ? body.notes.trim()
+        : '';
+
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!uuidPattern.test(candidateId)) {
+      return NextResponse.json(
+        { error: 'ID kandidat tidak valid.' },
+        { status: 400 }
+      );
+    }
+
+    if (action !== 'add' && action !== 'subtract') {
+      return NextResponse.json(
+        { error: 'Aksi harus add atau subtract.' },
+        { status: 400 }
+      );
+    }
 
     if (
-      !candidateId ||
       typeof voteCount !== 'number' ||
       !Number.isSafeInteger(voteCount) ||
-      voteCount < 0
+      voteCount <= 0
     ) {
       return NextResponse.json(
-        { error: 'Paslon dan jumlah suara harus diisi dengan benar.' },
+        { error: 'Jumlah suara harus berupa bilangan bulat positif.' },
         { status: 400 }
       );
     }
 
-    // Pastikan paslon benar-benar ada dan aktif.
-    const { data: candidate, error: candidateError } = await supabaseAdmin
-      .from('candidates')
-      .select('id')
-      .eq('id', candidateId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (candidateError || !candidate) {
+    if (notes.length > 500) {
       return NextResponse.json(
-        { error: 'Pasangan calon tidak ditemukan atau tidak aktif.' },
+        { error: 'Catatan maksimal 500 karakter.' },
         { status: 400 }
       );
     }
 
-    // Simpan total suara kertas yang sudah dihitung untuk paslon ini.
-    // Untuk saat ini, POST menetapkan nilai total, bukan menambahkannya.
-    const { data: existing, error: existingError } = await supabaseAdmin
-      .from('manual_vote_entries')
-      .select('id')
-      .eq('candidate_id', candidateId)
-      .limit(1)
-      .maybeSingle();
+    const { error } = await supabaseAdmin.rpc(
+      'adjust_manual_votes',
+      {
+        p_candidate_id: candidateId,
+        p_action: action,
+        p_vote_count: voteCount,
+        p_notes: notes || null,
+        p_created_by: auth.user.id,
+      }
+    );
 
-    if (existingError) {
-      console.error('Gagal memeriksa data suara:', existingError.message);
+    if (error) {
+      console.error('Gagal mengubah suara manual:', error);
+
+      const message = error.message.includes(
+        'Pengurangan melebihi jumlah suara'
+      )
+        ? 'Jumlah pengurangan melebihi suara manual yang tersedia.'
+        : error.message.includes('Kandidat tidak ditemukan')
+          ? 'Kandidat tidak ditemukan atau tidak aktif.'
+          : 'Gagal menyimpan perubahan suara.';
 
       return NextResponse.json(
-        { error: 'Gagal memeriksa data suara kertas.' },
-        { status: 500 }
+        { error: message },
+        { status: 400 }
       );
     }
 
-    const { data: userData } = await supabaseAdmin.auth.getUser(
-      request.headers.get('authorization')!.slice(7).trim()
-    );
-
-    const entryData = {
-      candidate_id: candidateId,
-      vote_count: voteCount,
-      notes,
-      created_by: userData.user?.id ?? null,
-      updated_at: new Date().toISOString(),
-    };
-
-    const result = existing
-      ? await supabaseAdmin
-          .from('manual_vote_entries')
-          .update(entryData)
-          .eq('id', existing.id)
-          .select('id, candidate_id, vote_count, notes, created_at, updated_at')
-          .single()
-      : await supabaseAdmin
-          .from('manual_vote_entries')
-          .insert(entryData)
-          .select('id, candidate_id, vote_count, notes, created_at, updated_at')
-          .single();
-
-    if (result.error) {
-      console.error('Gagal menyimpan suara kertas:', result.error.message);
-
-      return NextResponse.json(
-        { error: 'Gagal menyimpan suara kertas.' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { message: 'Hasil suara kertas berhasil disimpan.', entry: result.data },
-      { headers: { 'Cache-Control': 'no-store' } }
-    );
+    return NextResponse.json({
+      success: true,
+      message:
+        action === 'add'
+          ? 'Suara manual berhasil ditambahkan.'
+          : 'Suara manual berhasil dikurangi.',
+    });
   } catch (error) {
-    console.error('Kesalahan API suara kertas:', error);
+    console.error('Kesalahan API manual votes:', error);
 
     return NextResponse.json(
-      { error: 'Data tidak valid atau terjadi kesalahan pada server.' },
-      { status: 400 }
+      { error: 'Terjadi kesalahan saat memproses permintaan.' },
+      { status: 500 }
     );
   }
 }

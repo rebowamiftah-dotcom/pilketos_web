@@ -12,8 +12,18 @@ const navItems = [
     label: 'Dashboard',
     href: '/admin',
     icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2v-2z" />
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2v-2z"
+        />
       </svg>
     ),
   },
@@ -22,8 +32,18 @@ const navItems = [
     label: 'Data Pemilih',
     href: '/admin/students',
     icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+        />
       </svg>
     ),
   },
@@ -32,8 +52,35 @@ const navItems = [
     label: 'Pasangan Calon',
     href: '/admin/candidates',
     icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+        />
+      </svg>
+    ),
+  },
+  {
+    id: 'nav-manual-votes',
+    label: 'Penghitungan Manual',
+    href: '/admin/manual-votes',
+    icon: (
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6M9 11h6M9 15h2m2 0h2" />
       </svg>
     ),
   },
@@ -42,8 +89,18 @@ const navItems = [
     label: 'Hasil Voting',
     href: '/admin/results',
     icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 012-2h2a2 2 0 012 2v14" />
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 012-2h2a2 2 0 012 2v14"
+        />
       </svg>
     ),
   },
@@ -52,9 +109,19 @@ const navItems = [
     label: 'Pengaturan Pemilihan',
     href: '/admin/settings',
     icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8a4 4 0 100 8 4 4 0 000-8z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06-1.5 2.6-.08-.02a1.7 1.7 0 00-1.76.48l-.06.06h-3l-.02-.08a1.7 1.7 0 00-1.2-1.2l-.08-.02-1.5-2.6.06-.06a1.7 1.7 0 00.34-1.88l-.04-.08-2.6-1.5-.06.06a1.7 1.7 0 00-1.88.34l-.06.06-2.6-1.5.02-.08a1.7 1.7 0 00-.48-1.76l-.06-.06v-3l.08-.02a1.7 1.7 0 001.2-1.2l.02-.08 2.6-1.5.06.06a1.7 1.7 0 001.88.34l.08-.04 1.5-2.6-.06-.06a1.7 1.7 0 00-.34-1.88l-.06-.06 1.5-2.6.08.02a1.7 1.7 0 001.76-.48l.06-.06h3l.02.08a1.7 1.7 0 001.2 1.2l.08.02 1.5 2.6-.06.06a1.7 1.7 0 00-.34 1.88l.04.08 2.6 1.5.06-.06a1.7 1.7 0 001.88-.34l.06-.06 2.6 1.5-.02.08a1.7 1.7 0 00.48 1.76l.06.06v3l-.08.02a1.7 1.7 0 00-1.2 1.2l-.02.08-2.6 1.5z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06-1.5 2.6-.08-.02a1.7 1.7 0 00-1.76.48l-.06.06h-3l-.02-.08a1.7 1.7 0 00-1.2-1.2l-.08-.02-1.5-2.6.06-.06a1.7 1.7 0 00.34-1.88l-.04-.08-2.6-1.5-.06.06a1.7 1.7 0 00-1.88.34l-.06.06-2.6-1.5.02-.08a1.7 1.7 0 00-.48-1.76l-.06-.06v-3l.08-.02a1.7 1.7 0 001.2-1.2l.02-.08 2.6-1.5.06.06a1.7 1.7 0 001.88.34l.08-.04 1.5-2.6-.06-.06a1.7 1.7 0 00-.34-1.88l-.06-.06 1.5-2.6.08.02a1.7 1.7 0 001.76-.48l.06-.06h3l.02.08a1.7 1.7 0 001.2 1.2l.08.02 1.5 2.6-.06.06a1.7 1.7 0 00-.34 1.88l.04.08 2.6 1.5.06-.06a1.7 1.7 0 001.88-.34l.06-.06 2.6 1.5-.02.08a1.7 1.7 0 00.48 1.76l.06.06v3l-.08.02a1.7 1.7 0 00-1.2 1.2l-.02.08-2.6 1.5z"
+        />
       </svg>
     ),
   },
@@ -66,11 +133,7 @@ interface AdminLayoutProps {
   subtitle?: string;
 }
 
-export default function AdminLayout({
-  children,
-  title,
-  subtitle,
-}: AdminLayoutProps) {
+export default function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -116,9 +179,7 @@ export default function AdminLayout({
             <AppLogo size={36} />
             <div>
               <div className="font-800 text-sm text-primary">PILKETOS</div>
-              <div className="text-xs text-muted-foreground font-500">
-                Admin Dashboard
-              </div>
+              <div className="text-xs text-muted-foreground font-500">Admin Dashboard</div>
             </div>
           </div>
         </div>
@@ -153,8 +214,18 @@ export default function AdminLayout({
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7-7h14a7 7 0 00-7-7z" />
+              <svg
+                className="w-4 h-4 text-primary"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7-7h14a7 7 0 00-7-7z"
+                />
               </svg>
             </div>
             <div>
@@ -175,18 +246,13 @@ export default function AdminLayout({
       {/* Sidebar mobile */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 modal-backdrop"
-            onClick={() => setMobileMenuOpen(false)}
-          />
+          <div className="fixed inset-0 modal-backdrop" onClick={() => setMobileMenuOpen(false)} />
 
           <aside className="relative w-72 bg-card border-r border-border flex flex-col h-full z-50 slide-up">
             <div className="p-5 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <AppLogo size={32} />
-                <div className="font-800 text-sm text-primary">
-                  PILKETOS Admin
-                </div>
+                <div className="font-800 text-sm text-primary">PILKETOS Admin</div>
               </div>
 
               <button
@@ -194,7 +260,13 @@ export default function AdminLayout({
                 className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                 aria-label="Tutup menu"
               >
-                <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  className="w-5 h-5 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -243,21 +315,21 @@ export default function AdminLayout({
               className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors"
               aria-label="Buka menu"
             >
-              <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg
+                className="w-5 h-5 text-muted-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
 
             <div>
-              <h1 className="font-700 text-foreground text-base leading-tight">
-                {title}
-              </h1>
+              <h1 className="font-700 text-foreground text-base leading-tight">{title}</h1>
 
-              {subtitle && (
-                <p className="text-xs text-muted-foreground font-500">
-                  {subtitle}
-                </p>
-              )}
+              {subtitle && <p className="text-xs text-muted-foreground font-500">{subtitle}</p>}
             </div>
           </div>
 
@@ -268,17 +340,25 @@ export default function AdminLayout({
             </div>
 
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted">
-              <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7-7h14a7 7 0 00-7-7z" />
+              <svg
+                className="w-4 h-4 text-muted-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7-7h14a7 7 0 00-7-7z"
+                />
               </svg>
               <span className="text-xs font-600 text-foreground">Administrator</span>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {children}
-        </main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

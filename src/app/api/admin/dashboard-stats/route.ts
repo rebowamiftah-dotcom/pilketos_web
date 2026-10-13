@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Verifikasi sesi admin.
+    // 1. Verifikasi admin melalui token Supabase Auth.
     const authorization = request.headers.get('authorization');
 
     if (!authorization?.startsWith('Bearer ')) {
@@ -17,13 +17,14 @@ export async function GET(request: NextRequest) {
 
     const token = authorization.slice(7).trim();
 
-    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.getUser(token);
 
     const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    const userEmail = data.user?.email?.trim().toLowerCase();
+    const userEmail = authData.user?.email?.trim().toLowerCase();
 
     if (
-      error ||
+      authError ||
       !userEmail ||
       !adminEmail ||
       userEmail !== adminEmail
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       .select('id, status_pkl, has_voted, is_test_account');
 
     if (votersError) {
-      console.error('Gagal mengambil data pemilih:', votersError.message);
+      console.error('Gagal mengambil data pemilih:', votersError);
 
       return NextResponse.json(
         { error: 'Gagal mengambil statistik pemilih.' },
@@ -48,8 +49,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. Hitung statistik pemilih yang memenuhi syarat.
-    // Akun pengujian tidak dimasukkan ke statistik pemilih resmi.
+    // 3. Hitung statistik pemilih resmi.
     const eligibleVoters = (voters ?? []).filter(
       (voter) =>
         voter.status_pkl === true &&
@@ -64,8 +64,7 @@ export async function GET(request: NextRequest) {
 
     const belumVoting = totalPKL - sudahVoting;
 
-    // 4. Ambil hasil suara melalui endpoint internal yang sama
-    // secara logis: hitung agregat dari tabel ballots.
+    // 4. Ambil kandidat aktif.
     const { data: candidates, error: candidatesError } =
       await supabaseAdmin
         .from('candidates')
@@ -74,7 +73,7 @@ export async function GET(request: NextRequest) {
         .order('nomor_urut', { ascending: true });
 
     if (candidatesError) {
-      console.error('Gagal mengambil kandidat:', candidatesError.message);
+      console.error('Gagal mengambil kandidat:', candidatesError);
 
       return NextResponse.json(
         { error: 'Gagal mengambil data pasangan calon.' },
@@ -82,54 +81,105 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 5. Ambil suara digital.
     const { data: ballots, error: ballotsError } = await supabaseAdmin
       .from('ballots')
       .select('candidate_id');
 
     if (ballotsError) {
-      console.error('Gagal mengambil suara:', ballotsError.message);
+      console.error('Gagal mengambil suara digital:', ballotsError);
 
       return NextResponse.json(
-        { error: 'Gagal mengambil data suara.' },
+        { error: 'Gagal mengambil data suara digital.' },
         { status: 500 }
       );
     }
 
-    const voteCounts = new Map<string, number>();
+    // 6. Ambil suara manual.
+    const { data: manualEntries, error: manualError } =
+      await supabaseAdmin
+        .from('manual_vote_entries')
+        .select('candidate_id, vote_count');
 
-    for (const ballot of ballots ?? []) {
-      voteCounts.set(
-        ballot.candidate_id,
-        (voteCounts.get(ballot.candidate_id) ?? 0) + 1
+    if (manualError) {
+      console.error('Gagal mengambil suara manual:', manualError);
+
+      return NextResponse.json(
+        { error: 'Gagal mengambil data suara manual.' },
+        { status: 500 }
       );
     }
 
+    // 7. Agregasikan suara digital.
+    const digitalCounts = new Map<string, number>();
+
+    for (const ballot of ballots ?? []) {
+      digitalCounts.set(
+        ballot.candidate_id,
+        (digitalCounts.get(ballot.candidate_id) ?? 0) + 1
+      );
+    }
+
+    // 8. Agregasikan suara manual.
+    const manualCounts = new Map<string, number>();
+
+    for (const entry of manualEntries ?? []) {
+      manualCounts.set(
+        entry.candidate_id,
+        (manualCounts.get(entry.candidate_id) ?? 0) +
+          entry.vote_count
+      );
+    }
+
+    // 9. Gabungkan suara untuk setiap kandidat.
     const aggregatesWithoutPercentage = (candidates ?? []).map(
-      (candidate) => ({
-        candidate_id: candidate.id,
-        nomor_urut: candidate.nomor_urut,
-        nama_ketua: candidate.nama_ketua,
-        nama_wakil: candidate.nama_wakil,
-        vote_count: voteCounts.get(candidate.id) ?? 0,
-      })
+      (candidate) => {
+        const digitalVotes = digitalCounts.get(candidate.id) ?? 0;
+        const manualVotes = manualCounts.get(candidate.id) ?? 0;
+
+        return {
+          candidate_id: candidate.id,
+          nomor_urut: candidate.nomor_urut,
+          nama_ketua: candidate.nama_ketua,
+          nama_wakil: candidate.nama_wakil,
+          digital_vote_count: digitalVotes,
+          manual_vote_count: manualVotes,
+          vote_count: digitalVotes + manualVotes,
+        };
+      }
     );
 
-    const totalSuara = aggregatesWithoutPercentage.reduce(
-      (sum, candidate) => sum + candidate.vote_count,
+    // 10. Hitung total gabungan.
+    const totalDigitalVotes = aggregatesWithoutPercentage.reduce(
+      (sum, candidate) => sum + candidate.digital_vote_count,
       0
     );
 
-    const aggregates = aggregatesWithoutPercentage.map((candidate) => ({
-      ...candidate,
-      percentage:
-        totalSuara > 0
-          ? Number(
-              ((candidate.vote_count / totalSuara) * 100).toFixed(2)
-            )
-          : 0,
-    }));
+    const totalManualVotes = aggregatesWithoutPercentage.reduce(
+      (sum, candidate) => sum + candidate.manual_vote_count,
+      0
+    );
 
-    // 5. Kirim respons JSON.
+    const totalSuara = totalDigitalVotes + totalManualVotes;
+
+    // 11. Hitung persentase berdasarkan total gabungan.
+    const aggregates = aggregatesWithoutPercentage
+      .map((candidate) => ({
+        ...candidate,
+        percentage:
+          totalSuara > 0
+            ? Number(
+                ((candidate.vote_count / totalSuara) * 100).toFixed(2)
+              )
+            : 0,
+      }))
+      .sort(
+        (a, b) =>
+          b.vote_count - a.vote_count ||
+          a.nomor_urut - b.nomor_urut
+      );
+
+    // 12. Kirim hasil terbaru.
     return NextResponse.json(
       {
         stats: {
@@ -137,6 +187,8 @@ export async function GET(request: NextRequest) {
           sudah_voting: sudahVoting,
           belum_voting: belumVoting,
           total_suara: totalSuara,
+          total_suara_digital: totalDigitalVotes,
+          total_suara_manual: totalManualVotes,
           partisipasi:
             totalPKL > 0
               ? Number(((sudahVoting / totalPKL) * 100).toFixed(2))
@@ -154,7 +206,10 @@ export async function GET(request: NextRequest) {
     console.error('Kesalahan API dashboard:', error);
 
     return NextResponse.json(
-      { error: 'Terjadi kesalahan saat mengambil statistik dashboard.' },
+      {
+        error:
+          'Terjadi kesalahan saat mengambil statistik dashboard.',
+      },
       { status: 500 }
     );
   }

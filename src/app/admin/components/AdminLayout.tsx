@@ -230,7 +230,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
             </div>
             <div>
               <p className="text-xs font-700 text-foreground">Administrator</p>
-              <p className="text-xs text-muted-foreground">admin@pilketos.test</p>
+              <p className="text-xs text-muted-foreground">osterfour25@gmail.com</p>
             </div>
           </div>
 

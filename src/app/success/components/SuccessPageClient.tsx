@@ -1,132 +1,312 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getVoterSession, clearVoterSession } from '@/lib/sessionStore';
+import { getVoterSession } from '@/lib/sessionStore';
 import AppLogo from '@/components/ui/AppLogo';
+import { supabaseAuth } from '@/lib/supabaseAuth';
+
+interface VoterInfo {
+  nama: string;
+  kelas: string;
+  jurusan: string;
+  has_voted: boolean;
+}
 
 export default function SuccessPageClient() {
   const router = useRouter();
+
   const [mounted, setMounted] = useState(false);
-  const [voterName, setVoterName] = useState('');
+  const [voter, setVoter] = useState<VoterInfo | null>(null);
   const [votedAt, setVotedAt] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setMounted(true);
-    const session = getVoterSession();
-    if (!session) {
-      router.replace('/');
-      return;
+    let cancelled = false;
+
+    async function loadVoterData() {
+      try {
+        const session = getVoterSession();
+
+        if (!session) {
+          router.replace('/');
+          return;
+        }
+
+        // Gunakan identitas siswa dari sesi yang sudah terverifikasi.
+        // Status voting tetap dibaca dari database.
+        const student = session.student;
+
+        const { data, error: queryError } = await supabaseAuth
+          .from('voters')
+          .select('nama, kelas, jurusan, has_voted')
+          .eq('id', student.id)
+          .maybeSingle();
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (!data) {
+          throw new Error('Data pemilih tidak ditemukan.');
+        }
+
+        if (cancelled) return;
+
+        setVoter({
+          nama: data.nama,
+          kelas: data.kelas,
+          jurusan: data.jurusan,
+          has_voted: data.has_voted,
+        });
+
+        if (data.has_voted) {
+          setVotedAt(
+            new Date().toLocaleString('id-ID', {
+              dateStyle: 'long',
+              timeStyle: 'short',
+              timeZone: 'Asia/Jakarta',
+            }),
+          );
+        }
+
+        setError('');
+      } catch (err) {
+        console.error('Gagal memuat data pemilih:', err);
+
+        if (!cancelled) {
+          setError(
+            'Data pemilih belum dapat dimuat. Silakan kembali ke beranda dan periksa status voting Anda.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setMounted(true);
+        }
+      }
     }
-    setVoterName(session.student.nama);
-    // Format time statically to avoid locale hydration mismatch
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    setVotedAt(`${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`);
-    // Clear session after recording success
-    clearVoterSession();
+
+    void loadVoterData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+          <p className="mt-4 text-sm font-semibold text-slate-600">
+            Memuat data pemilih...
+          </p>
+        </div>
+      </main>
     );
   }
 
+  const hasVoted = voter?.has_voted === true;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-emerald-50 blur-3xl opacity-60"></div>
-        <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-accent/5 blur-3xl"></div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-8 text-slate-900">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-emerald-100/60 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-blue-100/60 blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2">
-            <AppLogo size={40} />
-            <span className="font-800 text-xl text-primary">PILKETOS DIGITAL</span>
-          </div>
+        {/* LOGO */}
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <AppLogo size={36} />
+          <span className="text-lg font-extrabold tracking-tight text-blue-950">
+            PILKETOS DIGITAL
+          </span>
         </div>
 
-        {/* Success card */}
-        <div className="bg-card rounded-3xl border border-border shadow-modal p-8 text-center slide-up">
-          {/* Success icon */}
-          <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path
-                className="checkmark-path"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+        {/* CARD */}
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          {/* STATUS ICON */}
+          <div
+            className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${
+              error
+                ? 'bg-amber-100'
+                : hasVoted
+                  ? 'bg-emerald-100'
+                  : 'bg-slate-100'
+            }`}
+          >
+            {error ? (
+              <span className="text-3xl">!</span>
+            ) : hasVoted ? (
+              <svg
+                className="h-9 w-9 text-emerald-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="h-9 w-9 text-slate-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8v4m0 4h.01"
+                />
+              </svg>
+            )}
           </div>
 
-          <h1 className="text-2xl font-800 text-foreground mb-2">Voting Berhasil!</h1>
-          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-            Terima kasih telah menggunakan hak suara Anda.
-          </p>
+          <div className="text-center">
+            <h1 className="text-2xl font-extrabold text-slate-900">
+              {error
+                ? 'Data Belum Tersedia'
+                : hasVoted
+                  ? 'Voting Berhasil!'
+                  : 'Belum Melakukan Voting'}
+            </h1>
 
-          {/* Voter info */}
-          {voterName && (
-            <div className="bg-muted/50 rounded-xl p-4 mb-6 text-left">
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Pemilih</span>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              {error
+                ? 'Kami belum dapat memeriksa status voting dari database.'
+                : hasVoted
+                  ? 'Terima kasih telah menggunakan hak suara Anda.'
+                  : 'Status database menunjukkan bahwa Anda belum melakukan voting.'}
+            </p>
+          </div>
+
+          {/* DATA PEMILIH */}
+          {voter && (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                Data Diri Pemilih
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">
+                    Nama Lengkap
+                  </p>
+                  <p className="mt-0.5 break-words text-sm font-bold text-slate-900">
+                    {voter.nama}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500">
+                      Kelas
+                    </p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-900">
+                      {voter.kelas}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500">
+                      Jurusan
+                    </p>
+                    <p className="mt-0.5 break-words text-sm font-bold text-slate-900">
+                      {voter.jurusan}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="font-700 text-foreground text-sm">{voterName}</p>
-              {votedAt && (
-                <p className="text-xs text-muted-foreground mt-1">Waktu voting: {votedAt}</p>
+            </div>
+          )}
+
+          {/* STATUS VOTING */}
+          {!error && voter && (
+            <div
+              className={`mt-4 rounded-2xl border p-4 ${
+                hasVoted
+                  ? 'border-emerald-200 bg-emerald-50'
+                  : 'border-amber-200 bg-amber-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    hasVoted ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`}
+                />
+
+                <p
+                  className={`text-sm font-extrabold ${
+                    hasVoted ? 'text-emerald-800' : 'text-amber-800'
+                  }`}
+                >
+                  Status: {hasVoted ? 'Sudah Voting' : 'Belum Voting'}
+                </p>
+              </div>
+
+              {hasVoted && (
+                <p className="mt-2 text-xs leading-relaxed text-emerald-700">
+                  Status diambil dari database. Waktu berikut adalah waktu
+                  halaman ini dibuka, bukan catatan waktu voting yang pasti.
+                  {` ${votedAt}`}
+                </p>
               )}
             </div>
           )}
 
-          {/* Confirmation message */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-2.5">
-              <svg className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <p className="text-emerald-700 text-xs font-500 text-left leading-relaxed">
-                Suara Anda telah tercatat dengan aman dalam sistem.
-                Anda tidak dapat melakukan voting kembali menggunakan token ini.
-              </p>
+          {/* PESAN ERROR */}
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+              <p className="text-xs leading-relaxed text-red-700">{error}</p>
             </div>
-          </div>
+          )}
 
-          {/* Privacy notice */}
-          <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-xl mb-6">
-            <svg className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-xs text-muted-foreground text-left leading-relaxed">
-              Pilihan Anda bersifat rahasia. Sistem tidak menyimpan informasi tentang siapa memilih siapa.
+          {/* PRIVASI */}
+          <div className="mt-4 rounded-xl bg-blue-50 p-3">
+            <p className="text-xs leading-relaxed text-blue-800">
+              Kerahasiaan pilihan tetap dijaga. Halaman ini hanya menampilkan
+              data pemilih dan status voting, bukan pasangan calon yang dipilih.
             </p>
           </div>
 
-          {/* Home button only — no back to voting */}
-          <a
+          {/* KEMBALI KE BERANDA */}
+          <Link
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-muted text-foreground rounded-xl font-600 text-sm hover:bg-secondary transition-colors"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-900"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"
+              />
             </svg>
             Kembali ke Beranda
-          </a>
-        </div>
+          </Link>
+        </section>
 
-        {/* Footer note */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="mt-5 text-center text-xs text-slate-500">
           PILKETOS DIGITAL &bull; Pemilihan OSIS 2026
         </p>
       </div>
-    </div>
+    </main>
   );
 }
